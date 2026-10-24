@@ -1,0 +1,37 @@
+name: Quiz Chess static demo
+
+on:
+  push:
+    branches: [v3-b]
+    paths:
+      - "web_proxy_nginx/**"
+      - "scripts/build_static.py"
+      - ".github/workflows/pages.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/configure-pages@v5
+      - name: Build static Quiz Chess
+        run: python3 scripts/build_static.py
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+          include-hidden-files: true
+      - id: deployment
+        uses: actions/deploy-pages@v4

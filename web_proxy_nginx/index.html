@@ -2,8 +2,7 @@
 <html lang="th">
 <head>
     <meta charset="UTF-8">
-    <title>Math Island - Classroom Dashboard</title>
-    <script src="/socket.io/socket.io.js"></script>
+    <title>Quiz Chess — Classroom Challenge</title>
     <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;500&display=swap" rel="stylesheet">
     <style>
         :root { --water: #2980b9; --land: #f1c40f; --empty: #3498db; }
@@ -128,12 +127,13 @@
 
     <div id="lobby-view" style="position: absolute; width: 100%; height: 100%; background: #2c3e50; z-index: 100; display: flex; align-items: center; justify-content: center;">
         <div style="background: white; color: #333; padding: 30px; border-radius: 20px; width: 400px; text-align: center;">
-            <h2>♟️ CHESS GAME SETUP</h2>
+            <h2>♟️ QUIZ CHESS</h2>
+            <p id="static-demo-note" hidden style="font-size: 14px; color: #555;">โหมดเว็บตัวอย่าง: เล่นสองคนบนเครื่องเดียวกัน และดาวน์โหลดประวัติเป็น CSV ได้</p>
             <div id="setup-offline">
-                <h2>🎮 สมรภูมิหมากรุกคณิตศาสตร์</h2>
+                <h2>🎮 ศึกหมากรุกตอบคำถาม</h2>
             
             <div style="margin-bottom: 20px; text-align: left; padding: 10px; background: #ecf0f1; border-radius: 10px;">
-                <label style="font-weight: bold; color: #2c3e50;">ชื่อเกม (Folder Name):</label><br>
+                <label style="font-weight: bold; color: #2c3e50;">ชุดโจทย์ (Folder Name):</label><br>
                 <input type="text" id="game-name" value="math01" style="width: 100%; padding: 8px; margin-top: 5px;" placeholder="เช่น math01"><br><br>
 
                 <label style="font-weight: bold; color: #2c3e50;">ระดับชั้นปี (ตัวเลข 1-6):</label><br>
@@ -157,7 +157,7 @@
 
         <!-- Menu Buttons in top right -->
         <div style="position: absolute; top: 20px; right: 20px; display: flex; flex-direction: column; gap: 10px; z-index: 100; align-items: flex-end;">
-            <h2 id="game-title-display" style="font-size: 24px; font-weight: bold; color: #f1c40f; text-shadow: 2px 2px 4px rgba(0,0,0,0.5); margin: 0; background: rgba(0,0,0,0.5); padding: 5px 15px; border-radius: 10px; width: 100%; text-align: center; box-sizing: border-box;">เกาะคณิตศาสตร์</h2>
+            <h2 id="game-title-display" style="font-size: 24px; font-weight: bold; color: #f1c40f; text-shadow: 2px 2px 4px rgba(0,0,0,0.5); margin: 0; background: rgba(0,0,0,0.5); padding: 5px 15px; border-radius: 10px; width: 100%; text-align: center; box-sizing: border-box;">Quiz Chess</h2>
             <button onclick="endGame()" style="background: #c0392b; color: white; border: none; padding: 15px 20px; font-size: 18px; font-weight: bold; border-radius: 5px; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.3); transition: 0.2s; width: 100%;">🏁 จบเกม</button>
             <div style="display: flex; gap: 10px; width: 100%;">
                 <button onclick="openInfoModal('character_abilities.html')" style="flex: 1; background: #e67e22; color: white; border: none; padding: 10px; border-radius: 5px; font-size: 14px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.3); transition: 0.2s; white-space: nowrap;">🔥 ความสามารถ</button>
@@ -190,7 +190,7 @@
     <div id="question-modal" class="hidden" style="position: absolute; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 200; display: flex; align-items: center; justify-content: center;">
         <div style="background: white; color: #333; padding: 20px; border-radius: 15px; width: 80%; max-width: 600px; text-align: center; position: relative;">
             <div id="timer-display" style="position: absolute; top: 10px; right: 20px; font-size: 24px; font-weight: bold; color: #e74c3c;">⏳ 0</div>
-            <h2 id="question-title">โจทย์คณิตศาสตร์</h2>
+            <h2 id="question-title">โจทย์คำถาม</h2>
             <div id="frame-container" style="width: 100%; height: 400px; background: #ecf0f1; margin-bottom: 20px; position: relative; border-radius: 10px; overflow: hidden; display: flex; align-items: center; justify-content: center;">
                 <img id="question-image" src="" alt="Question Image" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: contain; z-index: 1; display: none;" onerror="this.onerror=null; this.style.display='none'; document.getElementById('frame-image').style.display='none'; document.getElementById('question-no-img').style.display='block';">
                 <img id="frame-image" src="" alt="Frame Image" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: contain; z-index: 2; pointer-events: none; display: none;">
@@ -217,15 +217,33 @@
 
 
 
-    <script src="chess_logic.js"></script>
     <script>
-        const socket = io();
+        const STATIC_MODE = window.QUIZ_CHESS_STATIC === true;
+        if (STATIC_MODE) {
+            document.getElementById('static-demo-note').hidden = false;
+            document.getElementById('game-name').readOnly = true;
+        }
         let players = [];
         let turnColor = 'white'; // white or black
         
         // ตัวแปรเก็บข้อมูล Multi-game และ Log
         let activeGameName = "math01";
         let activeGradeLevel = "";
+
+        const escapeHtml = value => String(value).replace(/[&<>"']/g, character => ({
+            '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+        })[character]);
+
+        function localLogDownload(player) {
+            const csvCell = value => `"${String(value ?? '').replace(/"/g, '""')}"`;
+            const lines = ['ข้อความโจทย์/ID,ระดับความยาก,ผลการตอบ', ...player.actionLog.map(log =>
+                [log.question, log.level, log.status].map(csvCell).join(',')
+            )];
+            const blob = new Blob(['\uFEFF', lines.join('\r\n')], { type: 'text/csv;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const fileName = `${activeGameName}_${player.name}.csv`.replace(/[<>:"/\\|?*]+/g, '_');
+            return `<a href="${url}" download="${escapeHtml(fileName)}" style="background:#3498db; color:white; padding:5px 10px; border-radius:5px; text-decoration:none; font-size:14px;">📥 โหลดประวัติ (.csv)</a>`;
+        }
 
         // เปิด Modal ข้อมูลที่มุมขวาบน
         async function openInfoModal(fileName) {
@@ -258,6 +276,10 @@
                 alert("กรุณาระบุชื่อโฟลเดอร์เกม เช่น math01");
                 return;
             }
+            if (STATIC_MODE && gName !== 'math01') {
+                alert('โหมดเว็บตัวอย่างมีชุดโจทย์ math01 เท่านั้น');
+                return;
+            }
             if (!gGrade || isNaN(gGrade)) {
                 alert("กรุณาระบุระดับชั้นปี เป็นตัวเลขเท่านั้น (เช่น 1, 2, 3)");
                 return;
@@ -265,7 +287,7 @@
 
             activeGameName = gName;
             activeGradeLevel = gGrade;
-            document.getElementById('game-title-display').innerText = activeGameName;
+            document.getElementById('game-title-display').innerText = `Quiz Chess · ${activeGameName}`;
             
             const inputs = document.querySelectorAll('.off-p-name');
             players = [
@@ -323,7 +345,7 @@
                 
                 container.innerHTML += `
                     <div style="${cardStyle}">
-                        <h3 style="margin: 0; font-size: 18px;">${p.color==='white'?'⚪':'⚫'} ${p.name} ${p.isDefeated ? '💀 (แพ้)' : ''}</h3>
+                        <h3 style="margin: 0; font-size: 18px;">${p.color==='white'?'⚪':'⚫'} ${escapeHtml(p.name)} ${p.isDefeated ? '💀 (แพ้)' : ''}</h3>
                         <div class="remaining-pieces">${remainingPiecesHTML}</div>
                     </div>
                 `;
@@ -344,8 +366,10 @@
                 
                 // ถ้านักเรียนคนนี้เคยตอบคำถาม ให้ทำการบันทึกลงเซิร์ฟเวอร์
                 if (p.actionLog && p.actionLog.length > 0) {
-                    try {
-                        const res = await fetch('http://localhost:3000/api/saveGameLog', {
+                    if (STATIC_MODE) {
+                        downloadBtnHTML = localLogDownload(p);
+                    } else try {
+                        const res = await fetch('/api/saveGameLog', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({
@@ -357,7 +381,7 @@
                         });
                         const data = await res.json();
                         if (data.success) {
-                            downloadBtnHTML = `<a href="${data.filePath}" download style="background:#3498db; color:white; padding:5px 10px; border-radius:5px; text-decoration:none; font-size:14px;">📥 โหลดประวัติ (.csv)</a>`;
+                            downloadBtnHTML = `<a href="${escapeHtml(data.filePath)}" download style="background:#3498db; color:white; padding:5px 10px; border-radius:5px; text-decoration:none; font-size:14px;">📥 โหลดประวัติ (.csv)</a>`;
                         } else {
                             downloadBtnHTML = `<span style="color:red; font-size:12px;">บันทึก Log ไม่สำเร็จ</span>`;
                         }
@@ -372,7 +396,7 @@
                 listDiv.innerHTML += `
                     <div style="display: flex; justify-content: space-between; align-items: center; padding: 15px 0; border-bottom: 2px dashed #ecf0f1; font-size: 20px;">
                         <div>
-                            <span style="font-weight: bold;">${p.name} ${status}</span><br>
+                            <span style="font-weight: bold;">${escapeHtml(p.name)} ${status}</span><br>
                             ${downloadBtnHTML}
                         </div>
                     </div>
@@ -396,7 +420,7 @@
         }
 
         function fetchQuestionAndShow(level) {
-            const dir = `/all_game/${activeGameName}/img_L${level}`;
+            const dir = `all_game/${activeGameName}/img_L${level}`;
             const csvUrl = `${dir}/1.csv`; // ไฟล์หลักที่เก็บข้อมูลโจทย์ทั้งหมดของระดับนั้นไว้
             
             const imgElement = document.getElementById('question-image');
@@ -405,7 +429,7 @@
             
             // โหลดกรอบรูป 1.png จาก img_role โดยให้ซ้อนทับกันพอดี
             const defenderRole = activeBlockMetaData && activeBlockMetaData.defenderPiece ? activeBlockMetaData.defenderPiece.type : 'pawn';
-            const frameUrl = `/all_game/${activeGameName}/img_role/${defenderRole}/1.png`;
+            const frameUrl = `all_game/${activeGameName}/img_role/${defenderRole}/1.png`;
             
             const frameElement = document.getElementById('frame-image');
             if(frameElement) {
@@ -510,12 +534,13 @@
                 status: logStatus
             });
             
+            // Clear the old combat before the callback, which may start a counterattack.
+            const combatData = activeBlockMetaData;
+            activeBlockMetaData = null;
             // เรียก handleCombatResult ใน chess_logic.js
             if(window.handleCombatResult) {
-                window.handleCombatResult(isCorrect, activeBlockMetaData);
+                window.handleCombatResult(isCorrect, combatData);
             }
-            
-            activeBlockMetaData = null; // คืนค่า
         }
 
         function startTimer(seconds) {

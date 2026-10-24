@@ -1,5 +1,5 @@
 // chess_logic.js
-// ระบบการเดินและโจมตีสำหรับเกมหมากรุกคณิตศาสตร์ 8x8
+// ระบบการเดินและโจมตีสำหรับเกม Quiz Chess 8x8
 
 let boardState = Array(8).fill(null).map(() => Array(8).fill(null));
 let selectedPos = null;
@@ -103,7 +103,7 @@ function renderBoard() {
 // คลิกบนช่อง 8x8
 function onCellClick(r, c) {
     // กำลังรอต่อสู้ ห้ามคลิก
-    if (window.activeBlockMetaData) return;
+    if (typeof activeBlockMetaData !== 'undefined' && activeBlockMetaData) return;
     
     const clickedPiece = boardState[r][c];
     
