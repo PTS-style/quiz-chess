@@ -13,7 +13,7 @@ python3 -m http.server 8000 --directory site
 
 Open `http://localhost:8000/`. The static build contains the `math01` question set and its images. Both players share one device. Answer logs are downloaded as CSV files in the browser; no backend, accounts, online multiplayer, or shared leaderboard is provided. The build excludes old player logs and server files.
 
-After the changes are pushed to the default branch `v3-b`, select **Settings → Pages → Source: GitHub Actions** to publish the static demo. The expected URL with the current repository name is `https://pts-style.github.io/board_game1/`; verify it after deployment.
+The static demo is published at **https://pts-style.github.io/quiz-chess/** from the default branch `v3-b` using the GitHub Pages workflow in `.github/workflows/pages.yml`.
 
 ## Docker mode
 
